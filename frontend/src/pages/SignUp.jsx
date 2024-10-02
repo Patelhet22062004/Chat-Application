@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import useSignup from "../hooks/useSignup";
+import { Link, useNavigate } from "react-router-dom";
 import signupImage from "../assets/signup.png"; // Replace with the path to your image
+import toast from "react-hot-toast"; // Import toast for notifications
+import { useAuthContext } from "../context/AuthContext"; // Import AuthContext for setting user
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -12,21 +13,73 @@ const SignUp = () => {
     gender: "",
   });
 
-  const { loading, signup } = useSignup();
+  const { setAuthUser } = useAuthContext(); // Get setAuthUser from context
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false); // State for loading spinner
 
   const handleCheckboxChange = (gender) => {
     setFormData({ ...formData, gender });
   };
 
+  const handleInputErrors = () => {
+    const { username, email, password, confirmPassword, gender } = formData;
+    
+    if (!username || !email || !password || !confirmPassword || !gender) {
+      toast.error("Please fill all the fields");
+      return true;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return true;
+    }
+
+    return false;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await signup(formData);
+
+    // Check for input errors
+    const error = handleInputErrors();
+    if (error) return;
+
+    try {
+      setLoading(true); // Set loading state to true
+
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData), // Send form data
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Save user data to localStorage and update context
+      localStorage.setItem("user", JSON.stringify(data));
+      setAuthUser(data);
+
+      toast.success("Signup successful!"); // Show success message
+      navigate("/login"); // Navigate to login page
+    } catch (error) {
+      toast.error(error.message); // Show error message
+    } finally {
+      setLoading(false); // Reset loading state
+    }
   };
 
   return (
     <div className="flex flex-col md:flex-row md:h-[600px] sm:h-[400px]">
-      <div className="md:w-1/2 bg-light-gray flex items-center   justify-center">
-        <img src={signupImage} alt="Signup" className="hidden md:block md:h-full  object-cover rounded-l-lg shadow-2xl" />
+      <div className="md:w-1/2 bg-light-gray flex items-center justify-center">
+        <img
+          src={signupImage}
+          alt="Signup"
+          className="hidden md:block md:h-full object-cover rounded-l-lg shadow-2xl"
+        />
       </div>
       <div className="md:w-1/2 flex items-center justify-center bg-white p-8 rounded-lg md:rounded-r-lg shadow-lg">
         <div className="w-full max-w-md">
@@ -94,7 +147,6 @@ const SignUp = () => {
               />
             </div>
 
-            {/* Gender Checkbox component can be added here */}
             <div className="mb-4">
               <label className="label p-2">
                 <span className="text-base label-text">Gender</span>

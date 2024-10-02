@@ -1,90 +1,94 @@
-import User from "../models/user.model.js"
-import bcryptjs from "bcryptjs"
-import jwt from "jsonwebtoken"
-import { errorHandler } from "../utils/error.js"
+import User from "../models/user.model.js";
+import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { errorHandler } from "../utils/error.js";
 
+// Signup function
 export const signup = async (req, res, next) => {
-  const { username, email, password, confirmPassword, gender } = req.body
-
-  let validUser
-
-  validUser = await User.findOne({ email })
-
-  if (validUser) {
-    return next(errorHandler(400, "User already exists"))
-  }
-
-  if (password !== confirmPassword) {
-    return next(errorHandler(400, "Password don't match"))
-  }
-
-  const hashedPassword = bcryptjs.hashSync(password, 10)
-
-  const boyProfilePic = `https://avatar.iran.liara.run/public/boy?username=${username}`
-  const girlProfilePic = `https://avatar.iran.liara.run/public/girl?username=${username}`
-
-  const newUser = new User({
-    username,
-    email,
-    password: hashedPassword,
-    gender,
-    profilePic: gender === "male" ? boyProfilePic : girlProfilePic,
-  })
+  const { username, email, password, confirmPassword, gender } = req.body;
 
   try {
-    // generate jwt token
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET)
+    // Check if user already exists
+    let validUser = await User.findOne({ email });
+    if (validUser) {
+      return next(errorHandler(400, "User already exists"));
+    }
 
-    await newUser.save()
+    // Check password confirmation
+    if (password !== confirmPassword) {
+      return next(errorHandler(400, "Passwords don't match"));
+    }
 
-    res.cookie("access_token", token, { httpOnly: true }).status(201).json({
+    // Hash the password
+    const hashedPassword = bcryptjs.hashSync(password, 10);
+    const boyProfilePic = `https://avatar.iran.liara.run/public/boy?username=${username}`;
+    const girlProfilePic = `https://avatar.iran.liara.run/public/girl?username=${username}`;
+
+    // Create new user
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      gender,
+      profilePic: gender === "male" ? boyProfilePic : girlProfilePic,
+    });
+
+    // Save user to the database
+    await newUser.save();
+
+    // Generate JWT token
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    // Set cookie and respond
+    res.cookie("access_token", token, { httpOnly: true, secure: true }).status(201).json({
       _id: newUser._id,
       username: newUser.username,
       email: newUser.email,
       profilePic: newUser.profilePic,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
+// Login function
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
-    const validUser = await User.findOne({ email })
-
+    // Check if user exists
+    const validUser = await User.findOne({ email });
     if (!validUser) {
-      return next(errorHandler(404, "User not found"))
+      return next(errorHandler(404, "User not found"));
     }
 
-    const validPassword = bcryptjs.compareSync(password, validUser.password)
-
+    // Compare password
+    const validPassword = bcryptjs.compareSync(password, validUser.password);
     if (!validPassword) {
-      return next(errorHandler(401, "Wrong Credentials"))
+      return next(errorHandler(401, "Wrong DFG credentials"));
     }
 
-    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET)
+    // Generate JWT token
+    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-    res.cookie("access_token", token, { httpOnly: true }).status(200).json({
+    // Set cookie and respond
+    res.cookie("access_token", token, { httpOnly: true, secure: true }).status(200).json({
       _id: validUser._id,
       username: validUser.username,
       email: validUser.email,
       profilePic: validUser.profilePic,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
+// Logout function
 export const logout = (req, res) => {
   try {
-    res.clearCookie("access_token")
-
-    res.status(200).json({
-      message: "User has been loggged out successfully!",
-    })
+    res.clearCookie("access_token");
+    res.status(200).json({ message: "User has been logged out successfully!" });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};

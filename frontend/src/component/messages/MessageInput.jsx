@@ -34,8 +34,10 @@ const MessageInput = () => {
         >
           {loading ? (
             <div className="loading loading-spinner"></div>
-          ) : (
+          ) : (<div className=" p-[3px] text-white hover:scale-110 transition-all hover:text-green-300 rounded-sm">
+
             <BsSend />
+          </div>
           )}
         </button>
       </div>
