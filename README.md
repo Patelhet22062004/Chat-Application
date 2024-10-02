@@ -51,8 +51,8 @@ Ensure you have the following installed:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/Aditya-Patel24/QuickChat.git
-   cd QuickChat
+   git clone https://github.com/Patelhet22062004/Chat-Application.git
+   cd Chat-Application
    ```
 
 2. **Set up environment variables**:
